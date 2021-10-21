@@ -1,0 +1,94 @@
+version: '3.9'
+
+services:
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.13.3
+    container_name: kibana
+    hostname: kibana
+    volumes:
+      - ${PWD}/files/kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    ports:
+      - "5601:5601"
+#    depends_on:
+#      - elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.3
+    container_name: elasticsearch
+    hostname: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - cluster.name=cluster
+      - bootstrap.memory_lock=true
+      - xpack.ml.enabled=true
+      - discovery.type=single-node
+      - xpack.monitoring.collection.enabled=true
+      - path.repo=/usr/share/elasticsearch/repository
+      - "ES_JAVA_OPTS=-Xms1024m -Xmx1024m"
+      - TAKE_FILE_OWNERSHIP=true
+    entrypoint: >
+      /bin/sh -c "
+        sed -i \"s/{data,logs}/{data,logs,repository}/g\" /usr/local/bin/docker-entrypoint.sh
+        /bin/tini -- /usr/local/bin/docker-entrypoint.sh"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ${PWD}/files/elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - elasticsearch-repository:/usr/share/elasticsearch/repository
+  set-defaults:
+    image: alpine:3.13.1
+    container_name: set-defaults
+    build:
+      context: ./set-defaults
+#    depends_on:
+#      - elasticsearch
+  sm-metricbeat:
+    build:
+      context: ./sm-metricbeat
+    container_name: sm-metricbeat
+    hostname: sm-metricbeat
+    volumes:
+      - sm-metricbeat-data:/usr/share/metricbeat/data:rw
+      - ${PWD}/sm-metricbeat/metricbeat.yml:/usr/share/metricbeat/metricbeat.yml:ro
+      - ${PWD}/sm-metricbeat/modules.d/kibana-xpack.yml:/usr/share/metricbeat/modules.d/kibana-xpack.yml:ro
+      - ${PWD}/sm-metricbeat/modules.d/elasticsearch-xpack.yml:/usr/share/metricbeat/modules.d/elasticsearch-xpack.yml:ro
+      - ${PWD}/sm-metricbeat/modules.d/beat-xpack.yml:/usr/share/metricbeat/modules.d/beat-xpack.yml:ro
+      - ${PWD}/sm-metricbeat/modules.d/logstash-xpack.yml:/usr/share/metricbeat/modules.d/logstash-xpack.yml:ro
+#    depends_on:
+#      - kibana
+#      - elasticsearch
+#      - logstash
+  sm-filebeat:
+    build:
+      context: ./sm-filebeat
+    container_name: sm-filebeat
+    hostname: sm-filebeat
+    volumes:
+      - sm-filebeat-data:/usr/share/filebeat/data:rw
+      - ${PWD}/sm-filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+  fastapi:
+    container_name: fastapi
+    hostname: fastapi
+    build:
+      context: ./fastapi
+      args:
+        APP_PATH: /opt/app
+        APP_USER: fastapi
+    ports:
+      - "8080:8080"
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.13.3
+    container_name: logstash
+    hostname: logstash
+    volumes:
+      - ${PWD}/files/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ${PWD}/files/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ${PWD}/files/logstash/pipeline/monitoring.conf:/usr/share/logstash/pipeline/monitoring.conf:ro
+
+volumes:
+  elasticsearch-data:
+  elasticsearch-repository:
+  sm-metricbeat-data:
+  sm-filebeat-data:

@@ -1,0 +1,4 @@
+- module: beat
+  xpack.enabled: true
+  period: 10s
+  hosts: [ "sm-metricbeat:5066", "sm-filebeat:5066" ]

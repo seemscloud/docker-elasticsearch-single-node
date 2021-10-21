@@ -1,1 +1,0 @@
-# docker-elasticsearch-single-node

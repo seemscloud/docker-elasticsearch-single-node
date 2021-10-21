@@ -1,0 +1,15 @@
+http:
+  enabled: true
+  host: 0.0.0.0
+  port: 5066
+
+filebeat.config:
+  modules:
+    path: ${path.config}/modules.d/*.yml
+    reload.enabled: false
+
+output.logstash:
+  enabled: true
+  worker: 1
+  loadbalance: true
+  hosts: 'logstash:5044'

@@ -1,0 +1,8 @@
+server.name: kibana
+server.host: "0"
+
+elasticsearch.hosts: [ "http://elasticsearch:9200" ]
+
+xpack.encryptedSavedObjects.encryptionKey: "ggWkAo1pmIAw7FfkJ9zyO5DLiRYv8zqW"
+
+monitoring.kibana.collection.enabled: false
